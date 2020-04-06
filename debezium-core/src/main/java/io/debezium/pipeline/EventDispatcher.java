@@ -48,6 +48,7 @@ import io.debezium.schema.TopicSelector;
 public class EventDispatcher<T extends DataCollectionId> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EventDispatcher.class);
+    private static final String alteredTablesTopic = "altered-tables";
 
     private final TopicSelector<T> topicSelector;
     private final DatabaseSchema<T> schema;
@@ -249,7 +250,11 @@ public class EventDispatcher<T extends DataCollectionId> {
             SourceRecord record = new SourceRecord(offsetContext.getPartition(), offsetContext.getOffset(),
                     topicName, null, keySchema, key, dataCollectionSchema.getEnvelopeSchema().schema(), value);
 
+            SourceRecord alteredTableRecord = new SourceRecord(offsetContext.getPartition(),
+                    offsetContext.getOffset(), alteredTablesTopic, null, topicName);
+
             queue.enqueue(changeEventCreator.createDataChangeEvent(record));
+            queue.enqueue(changeEventCreator.createDataChangeEvent(alteredTableRecord));
 
             if (emitTombstonesOnDelete && operation == Operation.DELETE) {
                 SourceRecord tombStone = record.newRecord(
@@ -279,6 +284,7 @@ public class EventDispatcher<T extends DataCollectionId> {
 
             if (bufferedEvent != null) {
                 queue.enqueue(bufferedEvent.get());
+                queue.enqueue(getAlteredTableEvent(bufferedEvent.get()));
             }
 
             Schema keySchema = dataCollectionSchema.keySchema();
@@ -308,8 +314,22 @@ public class EventDispatcher<T extends DataCollectionId> {
                     }
                 }
                 queue.enqueue(event);
+                queue.enqueue(getAlteredTableEvent(event));
                 bufferedEvent = null;
             }
+        }
+
+        private DataChangeEvent getAlteredTableEvent(final DataChangeEvent event) {
+            SourceRecord eventRecord = event.getRecord();
+            return changeEventCreator.createDataChangeEvent(
+                    eventRecord.newRecord(
+                            alteredTablesTopic,
+                            eventRecord.kafkaPartition(),
+                            null,
+                            null,
+                            null,
+                            eventRecord.topic(),
+                            eventRecord.timestamp()));
         }
     }
 

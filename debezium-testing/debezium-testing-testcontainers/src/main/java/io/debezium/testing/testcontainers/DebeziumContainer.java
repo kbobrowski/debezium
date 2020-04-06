@@ -30,7 +30,7 @@ public class DebeziumContainer extends GenericContainer<DebeziumContainer> {
     public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
     public DebeziumContainer(final String version) {
-        super("debezium/connect:" + version);
+        super("debezium-local/connect:" + version);
 
         setWaitStrategy(
                 Wait.forHttp("/connectors")

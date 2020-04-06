@@ -14,7 +14,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -45,6 +45,7 @@ import okhttp3.Response;
 public class DebeziumContainerTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DebeziumContainerTest.class);
+    private static final String alteredTablesTopic = "altered-tables";
 
     private static Network network = Network.newNetwork();
 
@@ -82,7 +83,8 @@ public class DebeziumContainerTest {
     public void shouldRegisterPostgreSQLConnector() throws Exception {
         try (Connection connection = getConnection(postgresContainer);
                 Statement statement = connection.createStatement();
-                KafkaConsumer<String, String> consumer = getConsumer(kafkaContainer)) {
+                KafkaConsumer<String, String> consumer = getConsumer(kafkaContainer);
+                KafkaConsumer<String, String> alteredTablesConsumer = getConsumer(kafkaContainer)) {
 
             statement.execute("create schema todo");
             statement.execute("create table todo.Todo (id int8 not null, title varchar(255), primary key (id))");
@@ -92,7 +94,9 @@ public class DebeziumContainerTest {
 
             debeziumContainer.registerConnector("my-connector", getConfiguration(2));
 
-            consumer.subscribe(Arrays.asList("dbserver2.todo.todo"));
+            String tableName = "dbserver2.todo.todo";
+            consumer.subscribe(Collections.singleton(tableName));
+            alteredTablesConsumer.subscribe(Collections.singleton(alteredTablesTopic));
 
             List<ConsumerRecord<String, String>> changeEvents = drain(consumer, 2);
 
@@ -113,7 +117,17 @@ public class DebeziumContainerTest {
             assertThat(JsonPath.<String> read(changeEvents.get(0).value(), "$.before.title")).isEqualTo("Learn Quarkus");
             assertThat(JsonPath.<String> read(changeEvents.get(0).value(), "$.after.title")).isEqualTo("Learn Java");
 
+            changeEvents = drain(alteredTablesConsumer, 3);
+
+            assertThat(changeEvents.get(0).key()).isNull();
+            assertThat(changeEvents.get(0).value()).isEqualTo(String.format("\"%s\"", tableName));
+            assertThat(changeEvents.get(1).key()).isNull();
+            assertThat(changeEvents.get(1).value()).isEqualTo(String.format("\"%s\"", tableName));
+            assertThat(changeEvents.get(2).key()).isNull();
+            assertThat(changeEvents.get(2).value()).isEqualTo(String.format("\"%s\"", tableName));
+
             consumer.unsubscribe();
+            alteredTablesConsumer.unsubscribe();
         }
     }
 
