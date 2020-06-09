@@ -1,0 +1,1 @@
+mvn clean package -B -pl debezium-core,debezium-connector-postgres,debezium-connector-mysql -am -Passembly -Dformat.formatter.goal=validate -Dformat.imports.goal=check -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
