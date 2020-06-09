@@ -14,7 +14,9 @@ COPY debezium-core/target/debezium-core-$DEBEZIUM_VERSION.jar .
 
 WORKDIR $KAFKA_CONNECT_PLUGINS_DIR/debezium-connector-mysql
 
-COPY protobuf-java-3.8.0.jar .
-COPY postgresql-42.2.9.jar .
+COPY antlr4-runtime-4.7.2.jar .
+COPY mysql-binlog-connector-java-0.19.1.jar .
+COPY mysql-connector-java-8.0.16.jar .
+COPY debezium-ddl-parser/target/debezium-ddl-parser-$DEBEZIUM_VERSION.jar .
 COPY debezium-connector-mysql/target/debezium-connector-mysql-$DEBEZIUM_VERSION.jar .
 COPY debezium-core/target/debezium-core-$DEBEZIUM_VERSION.jar .
