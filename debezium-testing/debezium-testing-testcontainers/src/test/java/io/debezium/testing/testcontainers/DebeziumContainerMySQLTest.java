@@ -85,7 +85,6 @@ public class DebeziumContainerMySQLTest {
              KafkaConsumer<String, String> alteredTablesConsumer = getConsumer(kafkaContainer)) {
 
             //statement.execute("grant all privileges on todo to 'debezium'@'%'");
-            //statement.execute("create schema todo");
             statement.execute("create table todo.Todo (id int8 not null, title varchar(255), primary key (id))");
             //statement.execute("alter table Todo replica identity full");
             statement.execute("insert into todo.Todo values (1, 'Be Awesome')");
